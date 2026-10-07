@@ -1,0 +1,46 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const q=require('../panel/quota-warning');
+test('only explicit quota exhaustion, not transient rate, auth or network errors',()=>{
+  for(const s of ["You've hit your usage limit. Try again later","You've hit your limit",'insufficient_quota']) assert.equal(q.limitError(s),true);
+  for(const s of ['429 Too many requests','Rate limit exceeded','Not logged in','Connection timeout','Invalid API key',null]) assert.equal(q.limitError(s),false);
+});
+test('persistent account warning preserves unknowns and clears only on newer quota evidence',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'benchook-quota-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const h={id:'a',provider:'codex',folder:root};
+  const old={short:null,long:null,wasRead:new Date(1000).toISOString()};
+  q.save(root,h,"You've hit your usage limit",2000);
+  assert.ok(q.apply(root,h,old).quotaWarning);
+  assert.equal(q.apply(root,h,old).short,null);
+  assert.equal(q.apply(root,{...h,id:'b'},old).quotaWarning,undefined);
+  assert.ok(q.apply(root,h,{...old,quotaError:'Network error',wasRead:new Date(3000).toISOString()}).quotaWarning);
+  assert.ok(q.apply(root,h,{short:12,quotaError:'Network error',stale:true,wasRead:new Date(3000).toISOString()}).quotaWarning);
+  assert.equal(q.apply(root,h,{short:0,quotaSourceTrusted:true,wasRead:new Date(3000).toISOString()}).quotaWarning,undefined);
+  assert.equal(q.apply(root,h,old).quotaWarning,undefined);
+  q.save(root,h,"You've hit your usage limit",4000);
+  assert.ok(q.apply(root,h,old).quotaWarning);
+  fs.writeFileSync(path.join(root,'auth.json'),'{}');
+  assert.equal(q.apply(root,h,old).quotaWarning,undefined);
+});
+test('worker parses provider errors but does not classify successful task text',async t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'benchook-quota-worker-'));
+  const accounts=require('../panel/accounts'),cli=require('../panel/cli-path'),child=require('../panel/subprocess');
+  const env=process.env.BENCHOOK_DATA_DIR,oldCli=cli.cliInvocation,oldRun=child.run;
+  t.after(()=>{cli.cliInvocation=oldCli;child.run=oldRun;if(env===undefined)delete process.env.BENCHOOK_DATA_DIR;else process.env.BENCHOOK_DATA_DIR=env;fs.rmSync(root,{recursive:true,force:true});});
+  process.env.BENCHOOK_DATA_DIR=root;
+  const h={id:'claude-test',provider:'claude',name:'Test',folder:root};
+  fs.writeFileSync(path.join(root,'.credentials.json'),'{}');
+  fs.writeFileSync(path.join(root,'accounts.json'),JSON.stringify({accounts:[h]}));
+  accounts.setup(path.join(root,'accounts.json'));
+  cli.cliInvocation=()=>({command:process.execPath,leadingArgs:[]});
+  const worker=require('../panel/worker');
+  child.run=async()=>({code:0,output:JSON.stringify({type:'result',result:'quota exhausted is an example phrase',is_error:false})});
+  await worker.run({accountId:h.id,task:'test',folder:root});
+  assert.equal(q.apply(root,h,{}).quotaWarning,undefined);
+  child.run=async()=>({code:1,output:JSON.stringify({type:'result',is_error:true,errors:["You've hit your limit"]})});
+  await worker.run({accountId:h.id,task:'test',folder:root});
+  assert.ok(q.apply(root,h,{}).quotaWarning);
+});

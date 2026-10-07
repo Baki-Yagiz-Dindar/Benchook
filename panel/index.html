@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+<title>Benchook</title>
+<link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css">
+<style>
+  :root{--border:#2c2b29;--bg:#161615;--panel:#1a1a19;--top:#201f1d;--text:#e6e3df;
+        --muted:#8d8a85;--accent:#d98b4a;--green:#5ec26a;--yellow:#d9a441;--red:#c9704f;}
+  *{box-sizing:border-box}
+  /* SCROLLBAR. The scrollbar in the status pane had a white background and looked like the one of the
+     operating system. It was: it had never been styled, the light default of the operating system was
+     drawn and sat like a patch inside the dark palette. A thin scrollbar the colour of the surface,
+     that becomes clearer on hover. The own scrollbar of the terminal belongs to xterm and is separate. */
+  *::-webkit-scrollbar{width:9px;height:9px}
+  *::-webkit-scrollbar-track{background:transparent}
+  *::-webkit-scrollbar-thumb{background:#33322f;border-radius:6px;
+                             border:2px solid transparent;background-clip:content-box}
+  *::-webkit-scrollbar-thumb:hover{background:#4a4844;background-clip:content-box}
+  *::-webkit-scrollbar-corner{background:transparent}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+            display:flex;flex-direction:column;
+            font:13px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden;
+            -webkit-font-smoothing:antialiased}
+  #root{display:flex;flex:1;min-height:0}
+  /* Positioned like #topBar and #root: the themes paint fixed layers (body:before/after) that cover
+     any unpositioned element. */
+  #nameConflictBar{position:relative;z-index:5;flex:0 0 auto;padding:7px 14px;font-size:12px;line-height:1.45;color:var(--text);
+    background:color-mix(in srgb,var(--yellow) 14%,transparent);border-bottom:1px solid color-mix(in srgb,var(--yellow) 40%,transparent)}
+  #nameConflictBar b{color:var(--yellow)}
+  #nameConflictBar .name{font-weight:600}
+  .agent-card.locked,.agent-card.own.locked,.agent-card.own.locked:hover{border-color:color-mix(in srgb,var(--yellow) 55%,transparent)}
+  /* TOP BAR -- in the approved design the layout and agent buttons live here, not in the sidebar. The
+     sidebar therefore shows STATUS only. */
+  #topBar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:0 12px;height:44px;
+            background:var(--panel);border-bottom:1px solid var(--border)}
+  #topBar .brand{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;
+                   letter-spacing:-.005em}
+  #topBar .brand .brand-mark{width:28px;height:28px;display:block;flex:none;
+                           color:var(--accent);fill:currentColor}
+  #topBar .project{font-size:12px;color:var(--muted);max-width:280px;overflow:hidden;
+                   text-overflow:ellipsis;white-space:nowrap}
+  #topBar .empty{flex:1}
+  #topBar .group{display:flex;gap:2px;background:#232220;border:1px solid #2f2e2b;
+                  border-radius:7px;padding:2px}
+  #topBar .group button{width:auto;margin:0;padding:4px 11px;border:none;background:transparent;
+                         border-radius:5px;font-size:12px;color:var(--muted);text-align:center}
+  #topBar .group button:hover:not(:disabled){background:#2f2e2b;color:var(--text)}
+  #topBar .group button.selected{background:#3a3835;color:var(--text);font-weight:500}
+  /* A data-place button left outside the group still shows as selected. */
+  button.selected{border-color:var(--accent)}
+  #topBar .action{width:auto;margin:0;padding:5px 11px;font-size:12px;color:#b5b1ab}
+  /* Search and MCP work in every theme. These rules used to live only in the classic theme file; with
+     the pink theme selected, the input fell back to the white default of the operating system. */
+  #searchBox{position:relative;display:flex;align-items:center;gap:8px;flex:0 1 250px;
+           min-width:150px;max-width:280px;height:34px;padding:0 10px;border:1px solid var(--border)}
+  #searchBox .icon{width:15px;height:15px;flex:0 0 15px;color:var(--muted)}
+  #searchBox .icon svg{display:block;width:100%;height:100%;stroke:currentColor}
+  #searchInput{flex:1;min-width:0;background:transparent!important;border:0!important;outline:0;
+           box-shadow:none!important;color:var(--text);font:inherit;font-size:12.5px;padding:0}
+  #searchInput::placeholder{color:var(--muted)}
+  #searchClear{color:var(--muted);cursor:pointer;font-size:11px}
+  #searchClear:hover{color:var(--text)}
+  #searchResults{position:absolute;top:40px;left:0;width:min(380px,calc(100vw - 32px));max-height:420px;
+            overflow:auto;z-index:60;padding:6px;border-radius:13px;background:rgba(17,14,19,.97);
+            backdrop-filter:blur(26px);border:1px solid rgba(255,255,255,.13);
+            box-shadow:0 28px 75px rgba(0,0,0,.72)}
+  #searchResults .group{display:block;background:none;border:0;box-shadow:none;font-size:10px;
+                  letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:8px 9px 4px}
+  #searchResults .result{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:9px;
+                   cursor:pointer;font-size:12.5px;color:var(--text)}
+  #searchResults .result:hover,#searchResults .result.selected{background:rgba(255,255,255,.09)}
+  #searchResults .result .badge-mini{width:20px;height:20px;border-radius:6px;flex:0 0 20px;display:flex;
+                       align-items:center;justify-content:center;font-size:10px;
+                       background:rgba(255,255,255,.09);color:var(--muted)}
+  #searchResults .result .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #searchResults .result .hint{color:var(--muted);font-size:11px;white-space:nowrap}
+  #searchResults .empty{padding:12px 9px;color:var(--muted);font-size:12px}
+  #mcpSetup{flex:0 0 auto;width:auto;max-width:150px;margin:0;height:32px;padding:0 12px;
+          overflow:hidden;text-overflow:ellipsis;border:1px solid var(--border);white-space:nowrap}
+  #mcpSetup.ready{color:var(--green);border-color:color-mix(in srgb,var(--green) 48%,transparent)}
+  /* On an installed connection the button cannot be clicked (disabled), but the general
+     `button:disabled` dimming showed the green as grey. The state colour stays visible. */
+  #mcpSetup.ready:disabled{opacity:1;cursor:default}
+  #mcpSetup.missing{color:var(--yellow);border-color:color-mix(in srgb,var(--yellow) 48%,transparent)}
+  #mcpSetup.inactive{color:var(--muted)}
+  #sidebar{width:274px;flex:0 0 274px;background:var(--panel);border-right:1px solid var(--border);
+       display:flex;flex-direction:column;overflow:hidden}
+  .block{padding:12px 13px;border-bottom:1px solid var(--border)}
+  /* ---------- SIDEBAR: three tabs ---------- */
+  #sidebarTabs{flex:0 0 auto;display:flex;gap:2px;padding:8px 8px 0;background:var(--panel)}
+  #sidebarTabs button{width:auto;flex:1;margin:0;padding:7px 0;text-align:center;font-size:12.5px;
+                   background:transparent;border:none;border-radius:7px;color:var(--muted)}
+  #sidebarTabs button:hover:not(.selected){background:#201f1d;color:var(--text)}
+  #sidebarTabs button.selected{background:#262523;color:var(--text);font-weight:500}
+  #sidebar .page{flex:1;min-height:0;overflow:auto}
+  #sidebar .page[hidden]{display:none}
+  .part{padding:15px 14px;border-bottom:1px solid var(--border)}
+  .part:last-child{border-bottom:none}
+  .section{font:11px/1 "Segoe UI Variable Small","Segoe UI",sans-serif;letter-spacing:.06em;
+      text-transform:uppercase;color:#6e6b66;font-weight:600;margin-bottom:11px;display:block}
+  .list-header{position:sticky;top:0;z-index:5;margin:-15px -14px 10px;padding:13px 14px 10px;
+            display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--panel) 94%,transparent);
+            backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+  .list-header .title-group{flex:1;min-width:0}.list-header .section{margin-bottom:5px}
+  .list-header .path{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .list-header button{width:auto;flex:0 0 auto;margin:0;padding:7px 8px;text-align:center}
+  .context-info{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:5px}
+  .context-info div{min-width:0;padding:5px 4px;border-radius:7px;background:rgba(255,255,255,.025)}
+  .context-info b{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+                 color:var(--muted);font-weight:500}
+  .context-info span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                    font-size:11px;color:var(--text)}
+  /* A small action button that sits on the heading row: the New project button should not take a row
+     of its own under the list but sit next to the heading. */
+  .section-row{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .section-row .section{flex:1;min-width:0}
+  #sidebar .section-button{width:auto;flex:0 0 auto;margin:0;padding:4px 9px;font-size:11.5px;
+                text-align:center;color:var(--muted)}
+  #sidebar .section-button:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
+  /* Once an account exists the button shrinks to a plus: square, fixed, taking no space. */
+  #sidebar .section-button.plus{width:24px;height:24px;padding:0;font-size:15px;line-height:1}
+  /* Keep the backing select in the DOM for value/change handling. The custom button
+     owns focus and layout; theme rules must never reveal the backing select. */
+  .picker-close > select.hidden-select{display:none!important}
+  .picker-close{position:relative}
+  /* THE CLOSED STATE MATCHES THE SELECT: closed it should look as before, open it should look like the
+     new list. Because the control is a button it inherited the button rules (different corners, a
+     different background). The declarations of the select are repeated here one for one, so the two
+     boxes look the same side by side. */
+  .picker-button{width:100%;margin:0;display:flex;align-items:center;gap:8px;text-align:left;
+              background:#111110;color:var(--text);border:1px solid #2f2e2b;
+              border-radius:7px;padding:8px 9px;font:inherit;font-size:12.5px}
+  .picker-button:hover:not(:disabled){background:#111110;border-color:#2f2e2b}
+  .picker-button .picker-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+                         white-space:nowrap}
+  .picker-button .picker-arrow{flex:0 0 auto;color:var(--muted);font-size:11px;line-height:1}
+  .picker-button.expanded .picker-arrow{transform:rotate(180deg)}
+  .picker-button:disabled{opacity:.55}
+  .picker-list{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:70;max-height:280px;
+              overflow:auto;padding:6px;border-radius:13px;background:rgba(17,14,19,.97);
+              backdrop-filter:blur(26px);border:1px solid rgba(255,255,255,.13);
+              box-shadow:0 28px 75px rgba(0,0,0,.72)}
+  .picker-row{padding:8px 9px;border-radius:9px;cursor:pointer;font-size:12.5px;
+              color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .picker-row:hover{background:rgba(255,255,255,.09)}
+  .picker-row.selected{background:rgba(255,255,255,.09);color:#fff}
+  .small{font-size:11.5px;color:var(--muted)}
+  .two-buttons{display:flex;gap:7px;margin-top:8px}
+  .two-buttons button{width:auto;flex:1;margin:0;text-align:center;padding:8px 6px}
+  .two-buttons button#orchestratorStart:not(:disabled){background:var(--accent);color:#1a1a19;
+    border-color:var(--accent);font-weight:600}
+  .two-buttons button#orchestratorStart:not(:disabled):hover{background:#e8a066;border-color:#e8a066}
+  #sidebar select{width:100%;background:#111110;color:var(--text);border:1px solid #2f2e2b;
+              border-radius:7px;padding:8px 9px;font:inherit;font-size:12.5px}
+  /* The currently signed-in account: ONE line, not mixed up with the list. A long e-mail is clipped --
+     the addresses do not need to be visible all the time. */
+  .expanded{display:flex;align-items:baseline;gap:8px;font-size:12.5px}
+  .expanded .tag{color:var(--muted);flex:0 0 44px}
+  .expanded .btn{color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+            white-space:nowrap}
+  .expanded .card-head{color:var(--muted);font-size:11.5px;white-space:nowrap}
+  /* The account row: an initial, a short name and a bar. */
+  .account-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .account-row:last-child{margin-bottom:0}
+  /* The square on an account row now carries the PROVIDER ICON instead of a LETTER.
+     The colours match the agent cards: orange for Claude, greenish for Codex. */
+  .account-row .avatar{width:21px;height:21px;flex:0 0 21px;border-radius:6px;background:#2f2e2b;
+          display:flex;align-items:center;justify-content:center}
+  .account-row .avatar.claude{color:var(--accent)}
+  .account-row .avatar.codex{color:#7fb3a0}
+  .account-row .avatar .agent-icon{width:14px;height:14px;flex:0 0 14px}
+  .account-row .history-body{flex:1;min-width:0}
+  .account-row .name{display:flex;justify-content:space-between;gap:8px;font-size:12.5px}
+  .account-row .name b{font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .account-row .name i{font-style:normal;color:var(--muted);font-size:11.5px;white-space:nowrap}
+  .account-row .checkbox{height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-top:4px}
+  .account-row .checkbox i{display:block;height:100%;border-radius:2px}
+  .account-row .remove{cursor:pointer;opacity:.45;font-size:12px;padding:0 2px}
+  .account-row .remove:hover{opacity:1;color:var(--red)}
+  /* The actions on an account row are ICONS: text took up space. Because there is one decision point
+     there is no risk of confusion: x removes, and the dialog that opens offers signing out as well.
+     What they do is written as a full sentence in the tooltip. */
+  .account-row .add{width:20px;height:20px;flex:0 0 20px;border:1px solid #3a3835;border-radius:6px;
+            display:flex;align-items:center;justify-content:center;cursor:pointer;
+            color:var(--muted);font-size:12px;line-height:1}
+  .account-row .add:hover{border-color:var(--accent);color:var(--accent)}
+  /* Agent row */
+  /* ONE LIST, two states: every agent is shown, and the ones used in this project have a green frame
+     and a soft glow. What belongs to this project is framed and slightly brighter; what does not is
+     dimmed and unframed. */
+  /* AGENT GRID: rounder cards, two per row. Headings stay OUTSIDE the grid at full width; only the
+     cards are laid out in pairs. `minmax(0,1fr)` is required: without it a long agent name swells its
+     column and pushes the second card out. */
+  .agent-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+            margin-bottom:8px}
+  /* The right padding is smaller than the left: the remove button sits over that corner, and on a
+     two-per-row card every pixel is a letter of the name. */
+  .agent-card{display:flex;align-items:center;gap:7px;padding:9px 6px 9px 11px;border-radius:16px;
+      font-size:12.5px;border:1px solid transparent;min-width:0;
+      transition:border-color .15s,box-shadow .15s,background .15s}
+  /* To fit two columns the name and the bottom line do not overflow, they shorten. */
+  /* The name does not overflow, it shortens. Because the bottom line is flex, the shortening is applied
+     not to IT but to the text inside it (in the `.bottom` rule); if the two are confused the icon gets clipped too. */
+  .agent-card .history-body > .agent-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .agent-card .bottom{overflow:hidden;white-space:nowrap;min-width:0}
+  /* Each part of the bottom line shortens with an ellipsis, on every kind of card the same way. The
+     account gives way first; the model keeps its room until the account is down to a few letters. */
+  .agent-card .bottom > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .agent-card .bottom .bottom-text{flex:0 1 auto}
+  .agent-card .bottom .bottom-account{flex:0 10000 auto;min-width:20px}
+  .agent-card .bottom .bottom-sep{flex:0 0 auto;white-space:pre}
+  .agent-card .bottom .bottom-model{flex:0 1 auto}
+  /* NO BACKGROUND, ONLY A FRAME. The text inside an agent frame looked as if it sat in a box. A filled
+     background plus a frame plus a glow on top of each other made the card look like a second box
+     inside the sidebar. The distinction is now made by one thing: the frame colour. */
+  .agent-card:hover{background:#201f1d}
+  .agent-card.own{border-color:#2f5c3f;background:transparent}
+  .agent-card.own:hover{border-color:#4a9265;background:#1c221c}
+  .agent-card.own .status-dot{background:var(--green) !important}
+  .agent-card .history-body{flex:1;min-width:0;line-height:1.3}
+  /* THE NAME MUST BE READABLE: none of the names could be read and the frames were not visible either.
+     After the switch to a two-per-row grid the name had stayed the same tone as the dimmed bottom line.
+     The name is at full brightness and slightly bold; it is what tells them apart. */
+  .agent-card .agent-name{color:var(--text);font-weight:500}
+  /* The bottom line: the PROVIDER ICON, the short account name and the model.
+     No box - no second frame inside the frame. The icon uses `currentColor`, and its colour is set
+     here per provider. */
+  .agent-card .bottom{display:flex;align-items:center;gap:0;font-size:10.5px;color:#6e6b66}
+  .agent-card .bottom .agent-icon{margin-right:4px}
+  /* The permission mark in the left margin, under the status dot; full access is amber. */
+  .agent-card > .perm-icon{position:absolute;left:9px;bottom:6px;width:10px;height:10px;color:#8a8680;pointer-events:auto}
+  .agent-card > .perm-icon.perm-full{color:var(--yellow)}
+  /* The warning line: a short label, amber, with an ellipsis on overflow; the full sentence is in the tooltip. */
+  .agent-card .agent-warning{color:var(--yellow);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;
+               white-space:nowrap;margin-top:2px}
+  .agent-card .agent-icon{width:11px;height:11px;flex:0 0 11px}
+  .agent-card .agent-icon.claude{color:var(--accent)}
+  .agent-card .agent-icon.codex{color:#7fb3a0}
+  .agent-card .add{width:20px;height:20px;flex:0 0 20px;border:1px solid #3a3835;border-radius:6px;
+            display:flex;align-items:center;justify-content:center;color:var(--muted);
+            cursor:pointer;font-size:13px;line-height:1}
+  .agent-card .add:hover{border-color:var(--accent);color:var(--accent)}
+  /* IN-PAGE CONFIRMATION. The `confirm()` window of the operating system broke the state of Shift
+     (found with the keystroke journal), so confirmation is now drawn inside the panel.
+     `white-space: pre-line` keeps the line breaks in the text - confirmation texts carry file paths and
+     warnings, and collapsed into one paragraph they become unreadable. */
+  .confirm-overlay{position:fixed;inset:0;background:rgba(4,3,6,.76);z-index:50;
+            backdrop-filter:blur(13px) saturate(.7);
+            display:flex;align-items:center;justify-content:center}
+  .confirm-box{background:#1b1a18;border:1px solid #3a3835;border-radius:10px;
+            padding:16px;max-width:560px;width:calc(100% - 48px);
+            box-shadow:0 18px 50px -12px rgba(0,0,0,.7)}
+  .confirm-text{white-space:pre-line;font-size:12.5px;line-height:1.55;color:var(--text);
+            margin-bottom:14px;max-height:60vh;overflow:auto;word-break:break-word}
+  .confirm-field{width:100%;margin-bottom:12px;background:#141312;border:1px solid #3a3835;
+            border-radius:6px;padding:7px 9px;color:var(--text);font-size:12.5px;
+            font-family:inherit}
+  .confirm-field:focus{outline:none;border-color:var(--accent)}
+  /* The option in the confirmation dialog. One decision point: the button removes, the box also signs out. */
+  .confirm-option{display:flex;align-items:center;gap:8px;margin-bottom:12px;
+               font-size:12.5px;cursor:pointer;user-select:none}
+  .confirm-option input{cursor:pointer;accent-color:var(--accent);width:14px;height:14px}
+  /* Remove from project. Same behaviour as the x on a project row: quiet at rest, visible on hover,
+     turning red. It must not stand out enough to be clicked by accident. */
+  /* It sits OVER the corner, not beside the text: in the row it kept its width while invisible and
+     took a quarter of the name ("arastirm..." on this project's cards, the full name on the others). */
+  .agent-card .remove{cursor:pointer;opacity:0;font-size:13px;padding:1px 3px;line-height:1;
+     position:absolute;top:4px;right:6px;background:inherit;border-radius:5px}
+  .agent-card:hover .remove{opacity:.45}
+  .agent-card .remove:hover{opacity:1;color:var(--red)}
+  /* The project row: quick switching. The open one is marked with an accent. */
+  .project-row{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;
+      margin-bottom:2px;font-size:12.5px;cursor:pointer;color:var(--muted)}
+  .project-row:hover{background:#201f1d;color:var(--text)}
+  .project-row.selected{background:#262523;color:var(--text);font-weight:500;cursor:default}
+  .project-row .padded{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .project-row .remove{cursor:pointer;opacity:0;font-size:13px;padding:0 3px;line-height:1}
+  .project-row:hover .remove{opacity:.45}
+  .project-row .remove:hover{opacity:1;color:var(--red)}
+  /* An agent from another project. The WHOLE card used to be 45% transparent -- neither the name nor
+     the frame could be read. The distinction is now made by FRAME COLOUR rather than transparency:
+     green for this project, neutral grey for the other. The not-in-this-project badge was removed;
+     they already sit under the in-other-projects heading, so it said the same thing twice. */
+  .agent-card.external{border-color:#33322f;background:transparent}
+  .agent-card.external .agent-name{color:var(--muted)}
+  .agent-card.external:hover{border-color:#4a4844;background:#201f1d;cursor:pointer}
+  .agent-card.external:hover .agent-name{color:var(--text)}
+  /* A divider heading inside the list: which agent belongs where is clear at a glance. */
+  .agent-title{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#6e6b66;
+            margin:12px 0 5px}
+  .agent-title:first-child{margin-top:0}
+  /* A RUNNING AGENT blinks: which agents are actively running in this project is answered at a glance. */
+  /* THE DEPENDENCY MARK: a small amber warning mark in the top-left corner of an agent frame, with the
+     warning on hover.
+     Because the card corner is rounded at 16px the mark sits 3px from the top and 11px from the left;
+     further left it would spill over the rounded edge. It sits ABOVE the green dot on the bottom line
+     and does not collide with it. */
+  .agent-card{position:relative}
+  .agent-alert{position:absolute;left:10px;top:2px;width:12px;height:12px;border-radius:50%;
+     color:#1a1917;font-size:9px;font-weight:700;line-height:12px;
+     text-align:center;cursor:help;z-index:2}
+  /* Two levels: red = will not work, amber = works but something is missing. */
+  .agent-alert.red{background:var(--red)}
+  .agent-alert.yellow{background:var(--yellow)}
+  /* The long explanation in the detail view. */
+  .link-box{margin-top:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;
+     background:#1c1b19}
+  .link-box.strong{border-color:#7a4436;background:#231a17}
+  .link-box.soft{border-color:#6b5a2a;background:#211d15}
+  .link-title{font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .link-box.strong .link-title{color:var(--red)}
+  .link-box.soft .link-title{color:var(--yellow)}
+  .link-text{font-size:11px;color:var(--muted);line-height:1.5}
+  .link-list{margin:6px 0 0;padding-left:16px;font-size:11px;line-height:1.6}
+  /* AMBER MEANS ONE THING: the reason the mark is lit. Amber used to mean both missing-but-harmless and
+     the mark colour; the user saw amber and looked for a mark.
+     Now: a file that exists is quiet grey, missing-but-only-read is the normal text colour, and the
+     missing file that lights the mark is amber -- THE SAME amber as the mark on the card corner. */
+  .link-list li{color:var(--muted)}
+  .link-list li.absent{color:var(--yellow)}
+  .link-list li.absent.strong{color:var(--red);font-weight:600}
+  .link-note{margin-top:6px;font-size:10px;color:#6e6b66;line-height:1.5}
+  /* The area that edits the source file in its raw form. */
+  .source-text{width:100%;box-sizing:border-box;margin-top:10px;min-height:280px;
+     font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px;line-height:1.5;
+     color:var(--text);background:#141312;border:1px solid var(--border);border-radius:6px;
+     padding:8px;resize:vertical}
+  .source-text:focus{outline:none;border-color:var(--accent)}
+  .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+  .agent-card .status-dot.live{animation:yanip 1.1s infinite;box-shadow:0 0 7px currentColor}
+  .agent-card.running{background:#221f1a}
+  /* SKILL SIDE BADGES: C = Claude, X = Codex. Measured: there is no shared folder at project level,
+     which is why the card says which side sees it. The colours match the provider icons on the agent cards. */
+  .sides{display:inline-flex;gap:3px;margin-right:4px}
+  .side{width:13px;height:13px;border-radius:4px;font-size:9px;font-weight:700;
+         line-height:13px;text-align:center;cursor:help}
+  .side.claude{background:#3a2c1c;color:var(--accent)}
+  .side.codex{background:#1e2b27;color:#7fb3a0}
+  .side.absent{background:transparent;border:1px dashed #3a3835;color:#4a4844;line-height:11px}
+  .agent-card .badge{font-size:10px;color:#6e6b66;border:1px solid var(--border);border-radius:8px;
+             padding:1px 6px;white-space:nowrap}
+  .agent-card .badge.expanded{color:var(--accent);border-color:#4a3f30}
+  /* The bottom: accounts always visible, detail collapsed. */
+  #footer{flex:0 0 auto;border-top:1px solid var(--border);background:#171716;padding-bottom:9px}
+  #dipAc{padding:9px 13px 0;font-size:11px;color:#6e6b66;cursor:pointer}
+  #dipAc:hover{color:var(--text)}
+  #footer .account-row .card-usage{font-size:10px;color:#6e6b66;margin-top:2px;overflow:hidden;
+                text-overflow:ellipsis;white-space:nowrap}
+  #footer .account-row .card-usage b{font-weight:400;color:var(--accent)}
+  /* The reset and the weekly quota on ONE LINE: the bottom section took too much space (measured: 174
+     pixels). No number was removed; they now sit side by side. */
+  #footer .account-row .quota-row{display:flex;justify-content:space-between;gap:8px}
+  /* BOTTOM: sticks to the foot of the sidebar; the accounts and the quota stay where the eye goes. */
+  #footer{margin-top:auto;border-top:1px solid var(--border);background:#171716}
+  .block h2{margin:0 0 9px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+           color:#6e6b66;font-weight:600}
+  .row{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0}
+  .row .tag{color:var(--muted)}
+  .row .btn{color:var(--text);text-align:right;word-break:break-all}
+  .path{font-size:11px;color:var(--muted);word-break:break-all;line-height:1.5}
+  /* These two notes are sentences, not paths; `break-all` split words in the middle. */
+  #skillNote,#externalAgentNote{word-break:normal;overflow-wrap:anywhere}
+  button{width:100%;padding:7px 10px;margin-bottom:6px;cursor:pointer;text-align:left;
+         background:transparent;color:var(--text);border:1px solid var(--border);border-radius:6px;
+         font:inherit;font-size:12px}
+  button:hover:not(:disabled){background:#232220;border-color:#4a4844}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button:last-child{margin-bottom:0}
+  .bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;background:var(--green);transition:width .3s,background .3s}
+  .warning{color:var(--yellow);font-size:11px;margin-top:5px;line-height:1.35}
+  #rightClose{flex:1;display:flex;flex-direction:column;min-width:0}
+  #rightPane{flex:1;min-height:0;position:relative;display:flex}
+  /* Every PROJECT lives in its own field. Leaving a project does not tear its field down, it hides it:
+     the terminals behind keep running, so switching windows does not stop the work in the old one. */
+  .project-area{flex:1;display:flex;min-width:0;min-height:0}
+  .project-area[hidden]{display:none}
+  .page-body{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+  .page-body[hidden]{display:none}
+  /* The page strip: several panels in one project. */
+  #pageStrip{flex:0 0 auto;display:flex;align-items:center;gap:4px;padding:6px 8px 0;
+              background:var(--bg)}
+  #pageTabs{display:flex;gap:4px;flex:1;min-width:0;overflow:hidden}
+  .result-row{display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:8px 8px 0 0;
+      font-size:12.5px;color:var(--muted);cursor:pointer;background:#1c1c1a;
+      border:1px solid transparent;border-bottom:none;max-width:190px}
+  .result-row:hover{color:var(--text)}
+  .result-row.selected{background:#111110;color:var(--text);border-color:#33322f}
+  .result-row .result-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .result-row .close{opacity:.45;font-size:11px}
+  /* REORDERING BY DRAGGING. The dragged tab fades; the drop position is shown as a line at the edge of
+     the neighbour, so where it lands is not guessed. */
+  .result-row{position:relative}
+  .result-row.dragging{opacity:.4}
+  .result-row.drop-left:before,.result-row.drop-right:after{content:'';position:absolute;top:4px;bottom:4px;
+    width:2px;border-radius:2px;background:var(--accent)}
+  .result-row.drop-left:before{left:-3px}
+  .result-row.drop-right:after{right:-3px}
+  .result-row .close:hover{opacity:1;color:var(--red)}
+  #pageAdd{flex:0 0 auto;width:24px;height:24px;display:flex;align-items:center;
+             justify-content:center;border-radius:7px;color:var(--muted);cursor:pointer;
+             font-size:16px;line-height:1}
+  #pageAdd:hover{background:#232220;color:var(--text)}
+  .page-body.side-by-side{flex-direction:row}
+  .page-body.reverse{flex-direction:column-reverse}
+  .page-body.side-by-side.reverse{flex-direction:row-reverse}
+  .page-body.side-by-side .divider-vertical{cursor:col-resize}
+  .strip{display:none;flex:0 0 24px;align-items:center;gap:8px;padding:0 10px;cursor:pointer;
+         background:var(--top);border-top:1px solid var(--border);font-size:11px;
+         color:var(--accent)}
+  .strip:hover{background:#262523}
+  /* SIDE BY SIDE, TERMINAL ONLY: the strip stands at the right edge, so its text runs down the edge instead of
+     breaking word by word (seen on the 27 September screen tour). */
+  .page-body.side-by-side .strip{flex:0 0 26px;writing-mode:vertical-rl;white-space:nowrap;padding:10px 0;
+         border-top:none;border-left:1px solid var(--border);overflow:hidden}
+  .page-body.side-by-side.reverse .strip{border-left:none;border-right:1px solid var(--border)}
+  /* The arrow is laid out as ordinary horizontal text: turned with the vertical text - and even set upright, since the
+     font swaps in a vertical form of the glyph - the left arrow pointed down (screen tour, 27 September). */
+  .page-body.side-by-side .strip .strip-arrow{writing-mode:horizontal-tb;display:inline-block}
+  /* Jumping to an agent from search: the card is outlined for a moment so the eye finds it. */
+  .search-highlight{outline:2px solid var(--accent);outline-offset:2px}
+  /* A sentence beside a list - unlike a path, it breaks only between words. */
+  .side-note{font-size:11px;color:var(--muted);line-height:1.5}
+  .row-list{display:flex;gap:6px}
+  .row-list button{margin-bottom:6px;text-align:center;padding:5px 4px;font-size:11px}
+  /* The orchestrator pane looks like a card too: in the approved design it is a member of the grid. The
+     pane engine DID NOT CHANGE -- only its shell became a card. */
+  .top-right{flex:7 1 0;display:flex;min-width:0;min-height:0;padding:9px;gap:9px}
+  .pane{border:1px solid #33322f;border-radius:9px;overflow:hidden;background:#111110}
+  .divider-vertical{flex:0 0 5px;cursor:row-resize;background:var(--border)}
+  .divider-vertical:hover{background:var(--accent)}
+  .flow-close{flex:3 1 0;display:flex;flex-direction:column;min-height:0;background:#141413}
+  .flow-title{flex:0 0 auto;padding:4px 10px;background:var(--top);
+              border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);
+              display:flex;gap:10px;align-items:center}
+  .flow-title .identity{color:var(--text);font-weight:600}
+  .grid{flex:1;min-height:0;overflow:auto;padding:9px;display:grid;gap:9px;
+          /* min(100%,330px): in the Side by side layout, with the agent pane narrower than 330 px the
+             card was cut and a horizontal scrollbar appeared. The card is never narrower or wider than the pane. */
+          grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));align-content:start}
+  .grid > .path{grid-column:1/-1;padding:10px}
+  .card{display:flex;flex-direction:column;border:1px solid #33322f;border-radius:9px;
+        background:#111110;overflow:hidden;height:230px}
+  .card.running{border-color:#4a3f30}
+  .card.finished{opacity:.72}
+  .card .card-top{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:7px 10px;
+              background:var(--top);border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
+  /* Keep headers on one line. Truncate the name first and expose full text in tooltips. */
+  .card .card-top > *{flex:0 0 auto}
+  .card .card-name{color:var(--text);font-weight:600;font-size:12.5px;flex:0 1 auto;min-width:3em;
+              overflow:hidden;text-overflow:ellipsis}
+  .card .card-model{color:var(--muted);font-size:10.5px;margin-left:auto;flex:0 1 auto;min-width:0;
+              overflow:hidden;text-overflow:ellipsis}
+  .card .card-account{color:var(--muted);font-size:10.5px;opacity:.8;flex:0 1 auto;min-width:0;
+              overflow:hidden;text-overflow:ellipsis}
+  .card .card-account:not(:empty)::before{content:"·";margin-right:5px;opacity:.6}
+  .card .card-count{font-size:9.5px;color:#6e6b66;border:1px solid var(--border);
+               border-radius:7px;padding:0 5px}
+  .card .card-task{flex:0 0 auto;padding:3px 9px 4px;font-size:10.5px;color:var(--muted);
+             border-bottom:1px solid var(--border);background:#1a1a19;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .flow-title .layer{margin-left:auto;cursor:pointer;color:var(--accent);
+                   text-decoration:underline}
+  .history-row{display:flex;gap:9px;align-items:baseline;padding:5px 2px;
+          border-bottom:1px solid var(--border);font-size:11.5px;cursor:pointer}
+  .history-row:hover{background:#201f1d}
+  .history-row .history-name{color:var(--text);font-weight:600;flex:0 0 150px}
+  .history-row .history-task{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;
+               white-space:nowrap}
+  .history-row .shadow{color:var(--muted);font-size:10.5px;white-space:nowrap}
+  .history-title{color:var(--muted);font-size:10.5px;margin:10px 0 2px;
+           letter-spacing:.06em;text-transform:uppercase}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+  .field input,.field textarea,.field select{width:100%;background:#161615;color:var(--text);
+    border:1px solid var(--border);border-radius:5px;padding:6px 8px;font:inherit;font-size:12px}
+  .field textarea{resize:vertical;font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px}
+  .field .hint{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .pair{display:flex;gap:10px}
+  .pair .field{flex:1}
+  .warning-2{color:var(--yellow);font-size:11.5px;line-height:1.45;margin:8px 0;
+          border-left:2px solid var(--yellow);padding-left:9px}
+  .buttons{display:flex;gap:8px;margin-top:6px}
+  /* In a row the general bottom margin of a button (kept off the last one) made the last button taller than the
+     others; a row has no bottom margins (27 September screen tour). */
+  .buttons button{width:auto;flex:1;text-align:center;margin-bottom:0}
+  .card .card-close{margin-left:auto;font-size:10px;color:var(--accent);text-decoration:underline;
+             cursor:pointer}
+  .card .card-ask{flex:0 0 auto;padding:6px 9px;border-bottom:1px solid var(--border);background:#2a2412;font-size:11px}
+  .card .card-ask[hidden]{display:none}
+  .card.asking{border-color:var(--yellow)}
+  .card .card-ask .ask-title{color:var(--yellow);font-weight:600;margin-bottom:4px}
+  .card .card-ask .ask-detail{display:block;max-height:4.2em;overflow:auto;white-space:pre-wrap;word-break:break-all;
+             font-family:Consolas,monospace;font-size:10.5px;color:var(--text);background:#1a1a19;border-radius:4px;padding:3px 6px}
+  .card .card-ask .ask-actions{display:flex;gap:6px;align-items:center;margin-top:5px}
+  .card .card-ask button{font-size:11px;padding:2px 12px;border-radius:5px;border:1px solid #4a4845;background:#2f2e2b;color:var(--text);cursor:pointer}
+  .card .card-ask button.ask-allow{border-color:var(--yellow);color:var(--yellow)}
+  .card .card-ask button:disabled{opacity:.5;cursor:default}
+  .card .card-ask .ask-note{color:var(--red,#e06c6c);font-size:10.5px}
+  .card .body{flex:1;min-height:0;overflow:auto;padding:6px 9px;
+               font:11px/1.5 Consolas,"Cascadia Mono",monospace}
+  .card .card-footer{flex:0 0 auto;padding:5px 10px;background:transparent;
+              border-top:1px solid var(--border);font-size:10.5px;color:var(--muted);
+              display:flex;gap:8px;align-items:center}
+  .card .card-status{color:var(--yellow)}
+  .card.finished .card-status{color:var(--green)}
+  .card.invalid .card-status{color:var(--red)}
+  .card .card-duration{margin-left:auto;font-variant-numeric:tabular-nums}
+  .event{padding:1px 0;word-break:break-word}
+  .event b{color:var(--accent);font-weight:600}
+  .event.text{color:var(--muted);white-space:pre-wrap;margin:5px 0;padding:3px 0 3px 8px;
+              border-left:2px solid var(--border)}
+  .picker{padding:14px 18px;max-width:520px;margin:auto;text-align:center}
+  .picker h3{margin:0 0 6px;font-size:14px}
+  .picker p{color:var(--muted);font-size:12px;margin:0 0 12px;line-height:1.5}
+  .pane{flex:1 1 0;display:flex;flex-direction:column;min-width:120px;overflow:hidden}
+  /* The declined-connection bar above a Claude terminal: shown only while the decline stands. */
+  .pane .mcp-declined{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:6px 10px;font-size:12px;
+     color:var(--yellow);background:color-mix(in srgb,var(--yellow) 10%,transparent);
+     border-bottom:1px solid color-mix(in srgb,var(--yellow) 35%,transparent)}
+  .pane .mcp-declined span{flex:1;min-width:0}
+  .pane .mcp-declined button{width:auto;flex:0 0 auto;margin:0;padding:4px 10px}
+  .pane.active .title{background:#262523;border-bottom-color:var(--accent)}
+  .title{padding:5px 9px;background:var(--top);border-bottom:1px solid var(--border);
+          font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .title .name{color:var(--text);font-weight:600}
+  .title .empty{flex:1}
+  .title .x{cursor:pointer;padding:0 5px;border-radius:3px;color:var(--muted)}
+  .title .x:hover{background:#33322f;color:var(--red)}
+  .title,.flow-drag{cursor:grab}
+  .layout-targets{display:none;position:absolute;inset:0;z-index:20;pointer-events:none}
+  .layout-targets.expanded{display:block}
+  .layout-targets .target{position:absolute;background:rgba(217,139,74,.12);
+    border:2px dashed var(--accent);color:var(--text);display:flex;align-items:center;
+    justify-content:center;font-size:12px;pointer-events:auto;transition:background .12s,box-shadow .12s}
+  /* Highlight the drop target while a dragged pane is over it. */
+  .layout-targets .target.hover{background:rgba(217,139,74,.32);border-style:solid;
+    box-shadow:0 0 0 3px rgba(217,139,74,.35),0 0 18px rgba(217,139,74,.45)}
+  .layout-targets .top{left:25%;right:25%;top:8px;height:22%}
+  .layout-targets .bottom{left:25%;right:25%;bottom:8px;height:22%}
+  .layout-targets .left{left:8px;top:25%;bottom:25%;width:22%}
+  .layout-targets .right{right:8px;top:25%;bottom:25%;width:22%}
+  .screen{flex:1;min-height:0;padding:3px 5px}
+  /* The bottom bar of a pane. The rule is BOUND with `.pane >`: the `bottom` class is used in two places
+     in the panel - the bottom bar of a pane and the second line of an agent card. Written loosely, the
+     background, padding and top border here leaked into the agent card and the model name looked boxed
+     in (found by eye). */
+  .pane > .bottom{flex:0 0 auto;padding:3px 9px;background:var(--top);
+       border-top:1px solid var(--border);
+       font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;gap:10px}
+  /* TOOLTIP BALLOON - the tooltip the panel draws itself. The balloon of the operating system cannot be
+     styled, so the panel uses its own frame, background and font. */
+  #tooltip{position:fixed;z-index:9999;max-width:340px;pointer-events:none;
+              background:var(--top);color:var(--text);border:1px solid var(--border);
+              border-radius:8px;padding:7px 10px;font-size:11.5px;line-height:1.55;
+              white-space:pre-wrap;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+  .divider{flex:0 0 5px;cursor:col-resize;background:var(--border)}
+  .divider:hover{background:var(--accent)}
+  /* agent list */
+  .agent{padding:6px 7px;margin-bottom:5px;border:1px solid var(--border);border-radius:5px;
+        background:#201f1d;cursor:pointer;line-height:1.4}
+  .agent:hover{border-color:var(--accent)}
+  .agent .top{display:flex;align-items:center;gap:6px}
+  .agent .name{color:var(--text);font-weight:600;font-size:12px}
+  .agent .status{font-size:10px;padding:1px 5px;border-radius:8px;border:1px solid}
+  .agent .status.running{color:var(--yellow);border-color:var(--yellow)}
+  .agent .status.done{color:var(--green);border-color:var(--green)}
+  .agent .bottom-2{font-size:10.5px;color:var(--muted);word-break:break-word}
+  .agent.selected{border-color:var(--accent);background:#232220}
+  .agent.finished{opacity:.62}
+  .agent .open{margin-left:auto;font-size:10px;color:var(--accent);text-decoration:underline}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--yellow);
+         animation:yanip 1s infinite}
+  @keyframes yanip{0%,100%{opacity:1}50%{opacity:.25}}
+  /* agent detail */
+  #overlay{position:fixed;inset:0;background:rgba(4,3,6,.76);display:none;z-index:50;
+        backdrop-filter:blur(14px) saturate(.68)}
+  #detail{position:absolute;top:5%;left:50%;transform:translateX(-50%);width:min(880px,92vw);
+           max-height:90vh;overflow:auto;background:color-mix(in srgb,var(--panel) 96%,#09080b);
+           border:1px solid rgba(255,255,255,.14);
+           border-radius:8px;padding:16px 18px}
+  #detail h3{margin:0 0 4px;font-size:15px}
+  #detail .meta{color:var(--muted);font-size:11.5px;margin-bottom:12px}
+  #detail .token{margin-top:-8px;color:var(--accent)}
+  #detail h4{margin:14px 0 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+              color:var(--muted)}
+  #detail pre{white-space:pre-wrap;word-break:break-word;background:#161615;padding:10px 12px;
+               border-radius:6px;border:1px solid var(--border);font-size:12px;margin:0;
+               max-height:44vh;overflow:auto}
+  /* The frame for streaming text - the same box as `pre`, but without a monospaced font. */
+  #detail .frame{background:#161615;padding:10px 12px;border-radius:6px;
+                    border:1px solid var(--border);font-size:12px;color:var(--text);
+                    line-height:1.5}
+  #detail .frame.empty{color:var(--muted);font-style:italic}
+  /* THE MESSAGE THE ORCHESTRATOR SENT. The text was already here but had NO FORMATTING AT ALL: the line
+     breaks of a multi-line message were crushed into a wall, so it did not read as a sent message. */
+  #detail .meta-2{white-space:pre-wrap;word-break:break-word;background:#161615;
+                   padding:10px 12px;border-radius:6px;border:1px solid var(--border);
+                   font-size:12px;line-height:1.5;max-height:30vh;overflow:auto}
+  #detail .target{font-size:11.5px;color:var(--muted);padding:2px 0;word-break:break-all}
+  #detail .target b{color:var(--accent);font-weight:600}
+  #closeButton{float:right;width:auto;padding:3px 10px;margin:0}
+  .spacer{margin:auto;color:var(--muted);font-size:12px;text-align:center;padding:20px}
+  /* SETTINGS - themes are picked at a glance; a choice applies immediately and is saved with the layout. */
+  #settingsOverlay{position:fixed;inset:0;z-index:80;background:rgba(4,3,6,.76);
+                 display:flex;align-items:center;justify-content:center;
+                 backdrop-filter:blur(14px) saturate(.68)}
+  #settingsOverlay[hidden]{display:none}
+  #settingsBox{width:min(620px,calc(100vw - 48px));padding:18px;background:var(--panel);
+               border:1px solid var(--border);border-radius:14px;
+               box-shadow:0 30px 90px rgba(0,0,0,.58)}
+  #settingsTitle{display:flex;align-items:center;margin-bottom:5px}
+  #settingsTitle h2{margin:0;font-size:16px;letter-spacing:-.02em}
+  #settingsClose{width:28px;height:28px;margin:0 0 0 auto;padding:0;text-align:center}
+  #settingsBox>p{margin:0 0 15px;color:var(--muted);font-size:12px}
+  #themeCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .theme-card{position:relative;margin:0;padding:10px;text-align:left;border-radius:11px;
+            background:rgba(255,255,255,.035);border:1px solid var(--border)}
+  .theme-card:hover{background:rgba(255,255,255,.065)}
+  .theme-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent)}
+  .theme-color{display:block;height:54px;margin-bottom:9px;border-radius:8px;border:1px solid rgba(255,255,255,.10)}
+  .theme-color.pink{background:radial-gradient(circle at 15% 20%,#7b294c,transparent 48%),linear-gradient(135deg,#211720,#0b090d)}
+  .theme-color.purple{background:radial-gradient(circle at 75% 5%,#3c357f,transparent 48%),linear-gradient(135deg,#15151d,#090a0e)}
+  .theme-color.blue{background:radial-gradient(circle at 75% 12%,#174a70,transparent 48%),linear-gradient(135deg,#0d1822,#070b10)}
+  .theme-color.classic{background:linear-gradient(135deg,#1b1d20,#090a0c)}
+  .theme-card b{display:block;font-size:12.5px}.theme-card small{display:block;margin-top:2px;color:var(--text);font-size:11px}
+  #themeSaveStatus{min-height:16px;margin:10px 0 0;color:var(--text);font-size:11px}
+  #handoverField{margin:18px 0 0}
+  #handoverSaveStatus{min-height:16px;margin:4px 0 0;color:var(--text);font-size:11px}
+</style>
+<!-- Themes sit on top of the same base layout. The links not selected stay disabled. -->
+<!-- The SHAPE of the panel lives in one file and is the same in every theme; a theme file only defines
+     colour tokens - different coloured versions of the same program. The base comes BEFORE the theme
+     links so the tokens can override it. -->
+<link rel="stylesheet" href="theme-base.css">
+<link rel="stylesheet" href="theme-pink.css" data-panel-theme="pink">
+<link rel="stylesheet" href="theme-purple.css" data-panel-theme="purple" disabled>
+<link rel="stylesheet" href="theme-blue.css" data-panel-theme="blue" disabled>
+<link rel="stylesheet" href="theme-raycast.css" data-panel-theme="classic" disabled>
+<script src="theme.js"></script>
+<script src="theme-init.js"></script>
+</head>
+<body>
+<div id="topBar">
+  <div class="brand"><svg class="brand-mark" viewBox="0 0 128 128" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M16 16h54c23 0 37 11 37 28 0 9-4 16-12 21 12 5 18 12 18 22 0 16-14 25-38 25H16V16Zm20 18v60h14V71h24v23h14V34H74v23H50V34H36Z"/></svg>Benchook</div>
+  <!-- SEARCH - no shortcut; click the box and type.
+       It searches: agents, accounts, projects, pages and the commands of the panel. -->
+  <div id="searchBox">
+    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke-width="1.8"></circle><path d="m16 16 4 4" stroke-width="1.8" stroke-linecap="round"></path></svg></span>
+    <input id="searchInput" type="text" placeholder="Search…" autocomplete="off" spellcheck="false">
+    <span id="searchClear" title="Clear search" hidden>✕</span>
+    <div id="searchResults" hidden></div>
+  </div>
+  <!-- MCP: it used to sit at the bottom of the left column and was reduced to one button. The colour
+       says the state: green = ready, amber = missing, dimmed = no project or account selected. -->
+  <button id="mcpSetup" class="inactive" disabled
+          title="Connect the orchestrator to agents on other accounts or providers.">MCP connection</button>
+  <span id="mcpStatus" hidden></span>
+  <div class="empty"></div>
+  <div class="group">
+    <button data-place="stacked" title="Terminal above agents">Stacked</button>
+    <button data-place="sideBySide" title="Terminal beside agents">Side by side</button>
+    <button data-place="terminalOnly" title="Show orchestrator only">Terminal only</button>
+    <button data-place="agentsOnly" title="Show agents only">Agents only</button>
+  </div>
+  <button id="historyOpen" class="action"
+          title="View agent runs, activity, and results for this project">Agent activity</button>
+</div>
+<!-- SAME-NAME LOCKS: shown only while two different agents share a name. -->
+<div id="nameConflictBar" role="alert" hidden></div>
+<div id="root">
+  <div id="sidebar">
+    <!-- THREE TABS. One subject is visible at a time; accounts are shown with bars. -->
+    <div id="sidebarTabs">
+      <button data-tab="status" class="selected"
+              title="Project, orchestrator, context usage, and account limits.">Overview</button>
+      <button data-tab="agents"
+              title="Delegate tasks to agents with their own instructions, account, and model.">Agents</button>
+      <button data-tab="skills"
+              title="Reusable instructions followed by the orchestrator in its current session.">Skills</button>
+    </div>
+
+    <!-- ---------- STATUS ---------- -->
+    <div class="page" data-page="status">
+      <div class="part">
+        <!-- The heading and New project side by side; the path row was removed. The location of the
+             selected folder is already visible on hover: the path sits in the tooltip of every row. -->
+        <div class="section-row">
+          <div class="section" style="margin:0">Projects</div>
+          <button id="projectPick" class="section-button">Open project</button>
+        </div>
+        <div id="projectList"></div>
+        <div class="path" id="projectPath" hidden></div>
+      </div>
+
+      <div class="part" style="text-align:center">
+        <svg id="ctxGauge" width="132" height="132" viewBox="0 0 132 132">
+          <circle cx="66" cy="66" r="55" fill="none" stroke="var(--border)" stroke-width="10"></circle>
+          <circle id="ctxRing" cx="66" cy="66" r="55" fill="none" stroke="var(--green)"
+                  stroke-width="10" stroke-linecap="round" stroke-dasharray="345.6"
+                  stroke-dashoffset="345.6" transform="rotate(-90 66 66)"></circle>
+          <text id="ctxPercent" x="66" y="63" text-anchor="middle" fill="var(--text)"
+                font-size="26" font-weight="600"
+                font-family="Segoe UI Variable Display, Segoe UI, sans-serif">—</text>
+          <text x="66" y="82" text-anchor="middle" fill="#6e6b66" font-size="11"
+                font-family="Segoe UI, sans-serif">context used</text>
+        </svg>
+        <div class="context-info">
+          <div><b>Account</b><span id="ctxAccount">—</span></div>
+          <div><b>Model</b><span id="ctxModel">—</span></div>
+          <div><b>Tokens</b><span id="ctxUsed">—</span></div>
+        </div>
+        <div class="warning" id="ctxWarning" style="display:none;text-align:left"></div>
+      </div>
+
+      <div class="part">
+        <div class="section">Orchestrator</div>
+        <div class="path" id="orchestratorStatus" style="margin-bottom:9px">No active session</div>
+        <select id="orchestratorAccount" disabled><option value="">Select account…</option></select>
+        <select id="orchestratorModel" disabled style="margin-top:6px"><option value="">Select model…</option></select>
+        <div class="two-buttons">
+          <button id="orchestratorStart" disabled>Start</button>
+          <button id="orchestratorSwitch" disabled>Switch account or model</button>
+        </div>
+        <!-- The MCP connection moved to the top bar. -->
+      </div>
+    </div>
+
+    <!-- ---------- AGENTS ---------- -->
+    <!-- EVERYTHING ABOUT AGENTS IS ON THIS TAB: agent-related things, including editing agents, belong
+         under the agents window, not at the top right. -->
+    <!-- ---------- SKILLS ---------- -->
+    <!-- A Skills window next to the Agents window, holding every skill the panel can see.
+         THE SAME pattern as the agent list: the skills of this project on top, below them those that can
+         be taken from other projects, and at the very bottom the user-level ones (already on in every project). -->
+    <div class="page" data-page="skills" hidden>
+      <div class="part">
+        <div class="list-header"><div class="title-group"><div class="section">Skills</div>
+          <div class="path" id="skillSummary"></div></div>
+          <button id="skillCreate" title="Create a skill in this project">+ New skill</button></div>
+        <div id="skillList"></div>
+        <div class="path" id="skillNote" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="page" data-page="agents" hidden>
+      <div class="part">
+        <div class="list-header"><div class="title-group"><div class="section">Agents</div>
+          <div class="path" id="agentDefinition"></div></div>
+          <button id="agentCreate" title="Create an agent in this project">+ New agent</button>
+          <button id="projectSetupComplete" title="Review the project settings needed for agents to be discovered">Complete setup</button></div>
+        <!-- ONE list: the agents of this project are green-framed and bright, those of other projects are
+             dimmed. Both are clickable; the first edits, the second copies into this project. -->
+        <div id="agentList"></div>
+        <div class="path" id="externalAgentNote" style="margin-top:8px"></div>
+      </div>
+      <!-- The calls-of-the-open-orchestrator section was REMOVED: the same summary already shows in the
+           strip when the terminal is collapsed, and having it in two places took space. -->
+    </div>
+
+    <!-- ---------- ACCOUNTS ---------- -->
+    <!-- ACCOUNTS PINNED AT THE BOTTOM rather than in a separate window, visible without switching tabs. -->
+    <!-- THE RESULT LINE, INDEPENDENT OF THE TAB. The sentence writeStatus writes used to go only to
+         #orchestratorStatus on Overview; a user deleting an agent on the Agents tab never saw the
+         deleted sentence (measured: the element was 0x0 and the page hidden). This line is visible on
+         every tab; on Overview it is hidden because #orchestratorStatus already shows the same thing. -->
+    <div class="path" id="sidebarStatus" hidden style="padding:0 13px 6px"></div>
+    <div id="footer">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px 5px 13px">
+        <div class="section" style="margin:0;flex:1">Accounts</div>
+        <!-- Add account IS NO LONGER HIDDEN: the full label on an empty panel, only a plus once an account
+             exists - easy to set up, and no space taken afterwards. -->
+        <button id="accountAdd" class="section-button">Add account</button>
+        <button id="settingsOpen" title="Appearance and settings" aria-label="Settings"
+                style="width:28px;height:28px;margin:0;padding:0;text-align:center">⚙</button>
+      </div>
+      <div id="accountStore" style="padding:0 13px"></div>
+      <!-- THE FIXED Claude / Codex PAIR WAS REMOVED. Those two rows did not read the registry: the
+           account read was called with no folder argument and looked at the DEFAULT installations of
+           the machine (`~/.claude`, `~/.codex`). Before the registry existed the panel had exactly two
+           accounts and those rows were them; once the registry arrived the list above became the real
+           source but the pair stayed.
+           The result: the same information in two places, from two different sources, able to
+           contradict each other -- the user removed every account, the list emptied, and two rows still
+           stood here. The e-mail and the quota are already on the account rows. -->
+
+    </div>
+  </div>
+
+  <!-- PAGES: another panel inside the same window, with its own agents and its own orchestrator.
+       Every page carries its own orchestrator and agent grid; the one-orchestrator-per-page rule
+       still holds. The terminal of a background page DOES NOT CLOSE, it keeps running - only its
+       visibility goes. -->
+  <div id="rightClose">
+    <!-- The new-page button comes FIRST: at the far top right it was far from everything. Because the
+         tabs are `flex:1` the button used to be pushed to the right end. -->
+    <div id="pageStrip">
+      <span id="pageAdd" title="New tab in this project">+</span>
+      <div id="pageTabs"></div>
+    </div>
+    <div id="rightPane"></div>
+  </div>
+
+  <template id="pageTemplate">
+    <div class="page-body">
+      <div class="layout-targets" data-role="layoutTargets"><div class="target top" data-drop="top">Terminal above</div><div class="target bottom" data-drop="bottom">Terminal below</div><div class="target left" data-drop="left">Terminal on the left</div><div class="target right" data-drop="right">Terminal on the right</div></div>
+      <div class="top-right" data-role="topRight"></div>
+      <div class="divider-vertical" data-role="separatorY" title="Drag to resize"></div>
+      <div class="strip" data-role="strip"><span><span class="strip-arrow">▲</span> Show agents</span><span data-role="stripSummary"></span></div>
+      <div class="flow-close" data-role="flowContainer">
+        <div class="flow-title flow-drag"><span>Agents</span><span class="identity" data-role="flowIdentity">—</span><span class="layer" data-role="fold">Hide</span></div>
+        <div class="grid" data-role="grid"></div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<div id="overlay"><div id="detail"></div></div>
+
+<div id="settingsOverlay" hidden>
+  <div id="settingsBox" role="dialog" aria-modal="true" aria-labelledby="settingsName">
+    <div id="settingsTitle"><h2 id="settingsName">Settings</h2><button id="settingsClose" aria-label="Close">✕</button></div>
+    <p>Settings are saved on this device. Appearance changes apply immediately.</p>
+    <div id="themeCards"></div>
+    <p id="themeSaveStatus" role="status" aria-live="polite"></p>
+    <div class="field" id="handoverField">
+      <label for="handoverFile">Handoff notes file</label>
+      <input id="handoverFile" type="text" spellcheck="false" autocomplete="off" placeholder="docs/HANDOVER.md">
+      <div class="hint">When you switch a terminal to another provider, the panel shows how recently this file changed. The path is relative to the project folder.</div>
+    </div>
+    <p id="handoverSaveStatus" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
+<script src="node_modules/@xterm/addon-search/lib/addon-search.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

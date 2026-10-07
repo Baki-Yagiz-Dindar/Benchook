@@ -1,0 +1,39 @@
+/* PURPLE NIGHT - colour only. The shape lives in `theme-base.css` and is the same in every theme.
+ *
+ * Calm, sharp and low in contrast.
+ */
+:root{
+  --bg:#08090d;         --bg-raw:9,10,15;
+  --surface-raw:14,15,21;    --surface-top-raw:22,23,31;   --surface-opaque:#12131a;
+  --panel:rgba(var(--surface-raw),.66);
+  --top:rgba(var(--surface-top-raw),.60);
+  --border:rgba(255,255,255,.075);
+  --text:#f3f3f6;         --text-raw:235,236,244;
+  --muted:rgba(var(--text-raw),.46);
+  --green:#62d69b;  --yellow:#e8ba63;  --red:#ef6f73;
+
+  --accent:#8b87ff;           --accent-raw:139,135,255;
+  --accent-light:#a5a2ff;      --accent-dark:#6f6ae6;
+  --accent-border-flat:#a5a2ff; --accent-over:#0b0a1e;
+  --accent2-raw:83,140,214;
+
+  --accent-border:rgba(var(--accent-raw),.55);
+  --accent-line:rgba(var(--accent-raw),.36);
+  --accent-bright:rgba(var(--accent-raw),.42);
+  --accent-haze:rgba(var(--accent-raw),.16);
+  --accent-fill:rgba(var(--accent-raw),.15);
+  --accent-border-soft:rgba(var(--accent-raw),.14);
+  --accent-border-softest:rgba(var(--accent-raw),.12);
+  --accent-ring:rgba(var(--accent-raw),.10);
+  --accent-shadow:rgba(var(--accent-raw),.25);
+  --accent-glow:rgba(var(--accent-raw),.07);
+  --accent-frame:rgba(var(--accent-raw),.58);
+  --accent-secondary:rgba(var(--accent2-raw),.26);
+  --accent-title-border:rgba(var(--accent-raw),.20);
+  --accent-title-bg:rgba(52,48,110,.62);
+
+  --light-1:rgba(105,92,255,.24);
+  --light-2:rgba(53,104,180,.16);
+  --light-3:rgba(120,96,220,.12);
+  --light-4:rgba(70,90,180,.10);
+}

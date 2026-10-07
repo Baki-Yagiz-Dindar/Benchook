@@ -1,0 +1,29 @@
+{
+  "name": "benchook",
+  "version": "0.1.0",
+  "productName": "Benchook",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "private": true,
+  "description": "Windows workspace for Claude Code and Codex terminals, accounts, agents, and skills.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package:windows": "node ../tools/package-windows.cjs"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "@lydell/node-pty": "^1.2.0-beta.15",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
+    "electron": "^44.2.0"
+  },
+  "devDependencies": {
+    "acorn": "^8.18.0",
+    "rcedit": "5.0.2"
+  }
+}

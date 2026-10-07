@@ -1,0 +1,43 @@
+/* PINK GLASS - colour only. The shape lives in `theme-base.css` and is the same in every theme,
+ * so every theme is a differently coloured version of the same program.
+ *
+ * TOKEN LAYOUT, three families:
+ *   --*-raw    : comma-separated RGB (used as `rgba(var(--x-raw),.5)`)
+ *   --accent-* : derivatives of the accent; every theme supplies its own tones
+ *   --light-*  : the patches of ambient light in the background
+ */
+:root{
+  --bg:#09080b;         --bg-raw:13,11,15;
+  --surface-raw:21,18,23;    --surface-top-raw:36,30,39;   --surface-opaque:#17131a;
+  --panel:rgba(var(--surface-raw),.66);
+  --top:rgba(var(--surface-top-raw),.60);
+  --border:rgba(255,255,255,.10);
+  --text:#fff9fc;         --text-raw:255,241,249;
+  --muted:rgba(var(--text-raw),.48);
+  --green:#70dca8;  --yellow:#f0bd6d;  --red:#ff6f78;
+
+  --accent:#ff7a9c;           --accent-raw:255,122,156;
+  --accent-light:#ff86a6;      --accent-dark:#e85d86;
+  --accent-border-flat:#ff9bb4; --accent-over:#260710;
+  --accent2-raw:135,92,213;
+
+  --accent-border:rgba(255,151,181,.55);
+  --accent-line:rgba(var(--accent-raw),.36);
+  --accent-bright:rgba(var(--accent-raw),.42);
+  --accent-haze:rgba(var(--accent-raw),.16);
+  --accent-fill:rgba(var(--accent-raw),.15);
+  --accent-border-soft:rgba(var(--accent-raw),.14);
+  --accent-border-softest:rgba(var(--accent-raw),.12);
+  --accent-ring:rgba(236,83,128,.10);
+  --accent-shadow:rgba(216,53,102,.25);
+  --accent-glow:rgba(206,61,108,.07);
+  --accent-frame:rgba(255,160,185,.58);
+  --accent-secondary:rgba(var(--accent2-raw),.26);
+  --accent-title-border:rgba(255,133,166,.20);
+  --accent-title-bg:rgba(99,43,66,.70);
+
+  --light-1:rgba(224,65,119,.27);
+  --light-2:rgba(106,68,208,.23);
+  --light-3:rgba(193,76,120,.16);
+  --light-4:rgba(211,113,63,.13);
+}

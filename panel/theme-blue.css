@@ -1,0 +1,39 @@
+/* BLUE FOCUS - colour only. The shape lives in `theme-base.css` and is the same in every theme.
+ *
+ * Terminal-heavy and more technical.
+ */
+:root{
+  --bg:#06090e;         --bg-raw:7,11,17;
+  --surface-raw:10,15,22;    --surface-top-raw:17,24,34;   --surface-opaque:#0d141d;
+  --panel:rgba(var(--surface-raw),.66);
+  --top:rgba(var(--surface-top-raw),.60);
+  --border:rgba(167,198,232,.10);
+  --text:#f1f6fb;         --text-raw:215,229,243;
+  --muted:rgba(var(--text-raw),.46);
+  --green:#65d6a2;  --yellow:#eabc6c;  --red:#f4757b;
+
+  --accent:#5eb8ff;           --accent-raw:94,184,255;
+  --accent-light:#84caff;      --accent-dark:#3f9ae6;
+  --accent-border-flat:#84caff; --accent-over:#04121f;
+  --accent2-raw:36,150,145;
+
+  --accent-border:rgba(var(--accent-raw),.55);
+  --accent-line:rgba(var(--accent-raw),.36);
+  --accent-bright:rgba(var(--accent-raw),.42);
+  --accent-haze:rgba(var(--accent-raw),.16);
+  --accent-fill:rgba(var(--accent-raw),.15);
+  --accent-border-soft:rgba(var(--accent-raw),.14);
+  --accent-border-softest:rgba(var(--accent-raw),.12);
+  --accent-ring:rgba(var(--accent-raw),.10);
+  --accent-shadow:rgba(var(--accent-raw),.25);
+  --accent-glow:rgba(var(--accent-raw),.07);
+  --accent-frame:rgba(var(--accent-raw),.58);
+  --accent-secondary:rgba(var(--accent2-raw),.26);
+  --accent-title-border:rgba(var(--accent-raw),.20);
+  --accent-title-bg:rgba(20,66,105,.62);
+
+  --light-1:rgba(37,112,173,.26);
+  --light-2:rgba(24,92,87,.15);
+  --light-3:rgba(40,120,190,.12);
+  --light-4:rgba(30,80,140,.10);
+}

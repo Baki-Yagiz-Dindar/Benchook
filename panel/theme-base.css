@@ -1,0 +1,126 @@
+/* THE BODY OF THE PANEL - shape lives here, and NO COLOUR.
+   Every theme is a differently coloured version of the same program. Each theme used to be a SEPARATE
+   DESIGN with different heights, corner radii and layout, which made every theme but one look dated.
+   Shape now lives in ONE file and theme files define only tokens (colours). Adding a colour is a
+   matter of writing a :root block, not redrawing the design. */
+/* Shared surface material: warm ambient light, controlled glass, an opaque terminal. */
+html,body{background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI Variable Text","Segoe UI",sans-serif}
+body:before{content:"";position:fixed;inset:-12%;pointer-events:none;background:
+  radial-gradient(ellipse 48% 52% at 8% 8%,var(--light-1),transparent 68%),
+  radial-gradient(ellipse 44% 42% at 74% 18%,var(--light-2),transparent 70%),
+  radial-gradient(ellipse 38% 46% at 92% 88%,var(--light-3),transparent 72%),
+  radial-gradient(ellipse 30% 32% at 42% 105%,var(--light-4),transparent 70%),var(--bg);
+  filter:saturate(112%)}
+body:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;background:
+  linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.014) 1px,transparent 1px),
+  repeating-linear-gradient(115deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 6px);
+  background-size:52px 52px,52px 52px,auto;mask-image:linear-gradient(to bottom,rgba(0,0,0,.72),transparent 82%)}
+#topBar,#root{position:relative}#topBar{z-index:10}#root{z-index:1}
+#topBar{height:54px;padding:0 15px;gap:11px;background:rgba(var(--bg-raw),.50);backdrop-filter:blur(30px) saturate(145%);
+  border-bottom:1px solid rgba(255,255,255,.09);box-shadow:0 12px 35px rgba(0,0,0,.16)}
+#topBar .brand{font-weight:650;letter-spacing:-.025em}
+#searchBox{height:34px;flex-basis:250px;border-radius:10px;background:rgba(255,255,255,.065);
+  border:1px solid rgba(255,255,255,.11);box-shadow:inset 0 1px rgba(255,255,255,.055),0 8px 24px rgba(0,0,0,.13)}
+#searchBox:focus-within{background:rgba(255,255,255,.09);border-color:var(--accent-border);
+  box-shadow:0 0 0 4px var(--accent-ring),inset 0 1px rgba(255,255,255,.07)}
+#mcpSetup,#topBar .action,#topBar .group{border-radius:9px;background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px rgba(255,255,255,.045),0 7px 18px rgba(0,0,0,.12)}
+#topBar .group button{border-radius:7px}#topBar .group button.selected{background:rgba(255,255,255,.14);color:var(--text)}
+#sidebar{width:286px;flex-basis:286px;background:rgba(var(--surface-raw),.53);backdrop-filter:blur(34px) saturate(135%);
+  border-right:1px solid rgba(255,255,255,.10);box-shadow:16px 0 50px rgba(0,0,0,.18),inset -1px 0 rgba(0,0,0,.3)}
+#sidebarTabs{background:transparent;padding:11px 10px 0;gap:5px}#sidebarTabs button{border-radius:9px;color:rgba(var(--text-raw),.45)}
+#sidebarTabs button:hover:not(.selected){background:rgba(255,255,255,.055)}
+#sidebarTabs button.selected{background:rgba(255,255,255,.10);color:var(--text);box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 16px rgba(0,0,0,.11)}
+.part,.block{border-color:rgba(255,255,255,.065)}.section{font-size:10px;letter-spacing:.085em;color:rgba(var(--text-raw),.34)}
+.project-row{border-radius:9px;padding:8px 10px;border:1px solid transparent}.project-row:hover{background:rgba(255,255,255,.05)}
+.project-row.selected{background:linear-gradient(90deg,var(--accent-fill),rgba(255,255,255,.055));
+  border-color:rgba(255,255,255,.07);box-shadow:inset 3px 0 var(--accent),inset 0 1px rgba(255,255,255,.035)}
+#sidebar select,#sidebar button{border-radius:9px;background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.10);
+  box-shadow:inset 0 1px rgba(255,255,255,.035)}
+/* SELECT BOXES SPEAK THE SAME LANGUAGE AS THE SEARCH BOX: opened, the account pickers under the
+   orchestrator looked boxy, and they should look like the search box of the program.
+   The closed state matches the search box: a transparent ground, 10px corners, an accent border on
+   focus. The button that draws the own dropdown of the panel follows the same rule: closed it looks
+   as before, open it looks like the new list. If the two drifted apart, two boxes side by side would
+   look different.
+   THE LIST OF THE OPERATING SYSTEM no longer opens at all; the option rule is only a fallback. */
+#sidebar select,#sidebar .picker-button{color-scheme:dark;border-radius:10px;color:var(--text)!important;
+  background-color:rgba(255,255,255,.065)!important;border:1px solid rgba(255,255,255,.10);
+  box-shadow:inset 0 1px rgba(255,255,255,.035)}
+#sidebar select:hover:not(:disabled),#sidebar .picker-button:hover:not(:disabled){
+  background-color:rgba(255,255,255,.085)!important}
+#sidebar select:focus,#sidebar .picker-button:focus,#sidebar .picker-button.expanded{outline:none;
+  background-color:rgba(255,255,255,.09)!important;border-color:var(--accent-border)}
+#sidebar select:disabled,#sidebar .picker-button:disabled{opacity:.55}
+#sidebar select option{background:var(--surface-opaque);color:var(--text)}
+.two-buttons button#orchestratorStart:not(:disabled){background:linear-gradient(180deg,var(--accent-light),var(--accent-dark));border-color:var(--accent-border-flat);color:var(--accent-over);
+  box-shadow:0 9px 24px var(--accent-shadow),inset 0 1px rgba(255,255,255,.35)}
+#footer{background:rgba(var(--bg-raw),.24);border-color:rgba(255,255,255,.07)}
+#footer #settingsOpen{border-radius:8px;background:rgba(255,255,255,.045);color:rgba(var(--text-raw),.62)}
+#footer #settingsOpen:hover{background:rgba(255,255,255,.09);color:var(--text);border-color:rgba(var(--accent-raw),.38)}
+#rightClose{background:transparent}#pageStrip{padding:10px 13px 0;background:transparent}
+.result-row,.page-tab{border-radius:10px 10px 0 0;background:rgba(255,255,255,.035)}
+/* THE SELECTED TAB HAS A SOFT BOTTOM EDGE AND ROUNDED TOP CORNERS. The bottom was too hard and cut off
+   abruptly; it should fade into the background, and the top corners should stay rounded.
+
+   THE FIRST ATTEMPT BROKE THE CORNERS, for a measurable reason: border-image had been used to fade the
+   border, and when an element has a border-image the browser IGNORES border-radius and draws square
+   corners. The fade was gained and the roundness lost.
+
+   THE CURRENT WAY: the border is ordinary (the radius survives) and the fade is done with mask-image.
+   The mask fades the WHOLE element -- ground, border, everything -- so no single hard line is left at
+   the bottom. The fade starts below the text so the tab name does not look dimmed. */
+.result-row.selected,.page-tab.selected{
+  background:linear-gradient(180deg,
+    rgba(var(--surface-top-raw),.86) 0%,
+    rgba(var(--surface-top-raw),.74) 62%,
+    rgba(var(--surface-top-raw),.42) 100%);
+  backdrop-filter:blur(20px);color:var(--text);
+  border:1px solid rgba(255,255,255,.12);border-bottom:none;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 74%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 0%,#000 74%,transparent 100%);
+}
+.top-right{padding:12px 14px 11px;gap:11px}
+.pane{border-radius:14px;border:1px solid transparent;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+    linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.035) 42%,var(--accent-border-soft) 100%) border-box;
+  box-shadow:0 24px 60px rgba(0,0,0,.39),inset 0 1px rgba(255,255,255,.04)}
+.pane.active{background:linear-gradient(var(--bg),var(--bg)) padding-box,
+  linear-gradient(135deg,var(--accent-frame),rgba(255,255,255,.04) 48%,var(--accent-secondary)) border-box;
+  box-shadow:0 26px 65px rgba(0,0,0,.44),
+  0 0 30px var(--accent-glow),inset 0 1px rgba(255,255,255,.055)}
+.pane .title{height:34px;background:rgba(var(--surface-top-raw),.92);border-color:rgba(255,255,255,.075)}
+.pane.active .title{background:linear-gradient(90deg,var(--accent-title-bg),rgba(var(--surface-top-raw),.90));border-color:var(--accent-title-border)}
+.pane .screen{background:var(--bg)}.pane>.bottom{background:var(--surface-opaque);border-color:rgba(255,255,255,.065)}
+.divider-vertical{position:relative;height:9px;flex-basis:9px;background:transparent;margin:0 14px}
+.divider-vertical:before{content:"";position:absolute;left:0;right:0;top:4px;height:1px;background:linear-gradient(90deg,
+  transparent,rgba(255,255,255,.12) 14%,var(--accent-line) 50%,rgba(255,255,255,.12) 86%,transparent)}
+.divider-vertical:after{content:"";position:absolute;left:50%;top:2px;width:46px;height:5px;transform:translateX(-50%);
+  border-radius:8px;background:rgba(255,255,255,.20);box-shadow:0 0 14px var(--accent-haze)}
+.divider-vertical:hover:after{background:var(--accent);box-shadow:0 0 18px var(--accent-bright)}
+.page-body.side-by-side .divider-vertical{margin:14px 0;width:9px;height:auto}
+.page-body.side-by-side .divider-vertical:before{top:0;bottom:0;left:4px;right:auto;width:1px;height:auto;background:linear-gradient(180deg,
+  transparent,rgba(255,255,255,.12) 14%,var(--accent-line) 50%,rgba(255,255,255,.12) 86%,transparent)}
+.page-body.side-by-side .divider-vertical:after{left:2px;top:50%;width:5px;height:46px;transform:translateY(-50%)}
+.flow-close{margin:0 14px 13px;border-radius:14px;background:rgba(var(--surface-top-raw),.55);backdrop-filter:blur(24px) saturate(130%);
+  border:1px solid transparent;background:linear-gradient(rgba(var(--surface-top-raw),.72),rgba(var(--surface-raw),.66)) padding-box,
+  linear-gradient(140deg,rgba(255,255,255,.17),rgba(255,255,255,.035) 56%,var(--accent-border-softest)) border-box;
+  overflow:hidden;box-shadow:0 22px 54px rgba(0,0,0,.23),inset 0 1px rgba(255,255,255,.035)}
+.flow-title{height:33px;background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.07)}
+.grid{padding:10px;gap:10px}.card{height:212px;border-radius:11px;border:1px solid transparent;
+  background:linear-gradient(rgba(var(--bg-raw),.86),rgba(var(--bg-raw),.78)) padding-box,
+  linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.025) 58%,rgba(var(--accent-raw),.11)) border-box;
+  box-shadow:0 10px 24px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.025)}
+.card.running{background:linear-gradient(rgba(var(--bg-raw),.88),rgba(var(--bg-raw),.80)) padding-box,
+  linear-gradient(145deg,rgba(var(--accent-raw),.42),rgba(255,255,255,.03) 62%,rgba(var(--accent2-raw),.20)) border-box}
+.card .card-top{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.065)}
+.source-text[readonly]{color:rgba(var(--text-raw),.70);background:rgba(var(--bg-raw),.72);cursor:default}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.17);background-clip:content-box}
+
+/* THE TOOLTIP BALLOON IS MORE OPAQUE: the background of the tooltip was hard to read through. The
+   reason: the balloon used `--top`, which is 60% transparent in this theme, so the text behind showed
+   through. The balloon has a ground of its own now - the rest of the panel stays translucent and only
+   the box that has to be read is made opaque. */
+#tooltip{background:rgba(var(--surface-top-raw),.94);backdrop-filter:blur(18px);
+  border-color:rgba(255,255,255,.14);box-shadow:0 10px 30px rgba(0,0,0,.55)}

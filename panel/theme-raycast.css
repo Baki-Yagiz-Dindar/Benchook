@@ -1,0 +1,39 @@
+/* CLASSIC DARK - colour only. The shape lives in `theme-base.css` and is the same in every theme.
+ *
+ * The first dark palette of the panel: a warm brown ground with an orange accent.
+ */
+:root{
+  --bg:#161615;         --bg-raw:26,26,25;
+  --surface-raw:26,26,25;    --surface-top-raw:32,31,29;   --surface-opaque:#201f1d;
+  --panel:rgba(var(--surface-raw),.66);
+  --top:rgba(var(--surface-top-raw),.60);
+  --border:rgba(255,255,255,.09);
+  --text:#e6e3df;         --text-raw:230,227,223;
+  --muted:rgba(var(--text-raw),.46);
+  --green:#5ec26a;  --yellow:#d9a441;  --red:#c9704f;
+
+  --accent:#d98b4a;           --accent-raw:217,139,74;
+  --accent-light:#e8a066;      --accent-dark:#bf7638;
+  --accent-border-flat:#e8a066; --accent-over:#1a1a19;
+  --accent2-raw:160,120,80;
+
+  --accent-border:rgba(var(--accent-raw),.55);
+  --accent-line:rgba(var(--accent-raw),.36);
+  --accent-bright:rgba(var(--accent-raw),.42);
+  --accent-haze:rgba(var(--accent-raw),.16);
+  --accent-fill:rgba(var(--accent-raw),.15);
+  --accent-border-soft:rgba(var(--accent-raw),.14);
+  --accent-border-softest:rgba(var(--accent-raw),.12);
+  --accent-ring:rgba(var(--accent-raw),.10);
+  --accent-shadow:rgba(var(--accent-raw),.25);
+  --accent-glow:rgba(var(--accent-raw),.07);
+  --accent-frame:rgba(var(--accent-raw),.58);
+  --accent-secondary:rgba(var(--accent2-raw),.26);
+  --accent-title-border:rgba(var(--accent-raw),.20);
+  --accent-title-bg:rgba(84,58,32,.58);
+
+  --light-1:rgba(217,139,74,.13);
+  --light-2:rgba(150,110,70,.10);
+  --light-3:rgba(190,130,80,.08);
+  --light-4:rgba(120,100,70,.07);
+}
