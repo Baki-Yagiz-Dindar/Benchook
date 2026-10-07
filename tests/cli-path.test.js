@@ -103,10 +103,13 @@ test('a found CLI is remembered briefly, and looked up again once its file is go
   const cliPath = require('../panel/cli-path');
   childProcess.spawnSync = original;
   t.after(() => { delete require.cache[require.resolve('../panel/cli-path')]; });
-  assert.equal(cliPath.cliInvocation('benchookcachetest').command.toLowerCase(), exe.toLowerCase());
+  /* Compared as real long paths: on some machines (the GitHub Windows runner) the temp folder is reported in
+     its short 8.3 form (RUNNER~1) while where.exe answers with the long name of the same file. */
+  const same = (p) => fs.realpathSync.native(p).toLowerCase();
+  assert.equal(same(cliPath.cliInvocation('benchookcachetest').command), same(exe));
   const afterFirst = lookups;
   assert.ok(afterFirst >= 1, 'the first answer searched PATH');
-  assert.equal(cliPath.cliInvocation('benchookcachetest').command.toLowerCase(), exe.toLowerCase(), 'the second answer is the same');
+  assert.equal(same(cliPath.cliInvocation('benchookcachetest').command), same(exe), 'the second answer is the same');
   assert.equal(lookups, afterFirst, 'the second answer did not run where.exe again');
   fs.rmSync(exe);
   assert.equal(cliPath.cliInvocation('benchookcachetest'), null, 'a removed program is not reported from memory');
